@@ -18,7 +18,7 @@ module Teaspoon
                   to: :config
 
     def initialize(options = {})
-      @options = options
+      @options = options.symbolize_keys
       @name = (@options[:suite] || :default).to_s
       @config = suite_configuration
       @env = Rails.application.assets
@@ -31,7 +31,7 @@ module Teaspoon
     def spec_assets(include_helper = true)
       assets = specs
       assets.unshift(helper) if include_helper && helper
-      asset_tree(assets)
+      assets
     end
 
     def include_spec?(file)
@@ -98,7 +98,13 @@ module Teaspoon
     end
 
     def glob
-      @glob ||= Dir[config.matcher.present? ? Teaspoon.configuration.root.join(config.matcher) : ""]
+      if @options[:matcher]        
+        matcher = "{spec/javascripts/#{@options[:matcher]}}/**/*_spec.{js,js.coffee,coffee}"
+      else
+        matcher = config.matcher.present? ? config.matcher : ""
+      end
+      matcher = Teaspoon.configuration.root.join(matcher)
+      @glob ||= Dir[matcher]
     end
 
     def suite_configuration

@@ -120,7 +120,7 @@
         return;
       }
       this.constructor.run = true;
-      this.fixturePath = "" + Teaspoon.root + "/fixtures";
+      this.fixturePath = "" + "/assets/" + "/fixtures";
       this.params = Teaspoon.params = this.getParams();
       this.setup();
     }
@@ -261,6 +261,9 @@
       if (type.match(/application\/json;/)) {
         return fixture.json[fixture.json.push(JSON.parse(content)) - 1];
       }
+      if (url.match(/\.json/)) {
+        return fixture.json[fixture.json.push(JSON.parse(content)) - 1];
+      }
       if (preload) {
         return content;
       }
@@ -334,7 +337,7 @@
         throw "Unable to make Ajax Request";
       }
       xhr.onreadystatechange = callback;
-      xhr.open("GET", "" + Teaspoon.root + "/fixtures/" + url, false);
+      xhr.open("GET", "" + "/assets" + "/fixtures/" + url, false);
       return xhr.send();
     };
 

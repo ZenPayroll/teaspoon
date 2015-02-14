@@ -97,5 +97,5 @@ class Teaspoon.fixture
     throw("Unable to make Ajax Request") unless xhr
 
     xhr.onreadystatechange = callback
-    xhr.open("GET", "#{Teaspoon.root}/fixtures/#{url}", false)
+    xhr.open("GET", "assets/fixtures/#{url}", false)
     xhr.send()
