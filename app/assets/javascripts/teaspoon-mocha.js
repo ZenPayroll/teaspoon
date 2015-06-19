@@ -246,6 +246,14 @@
           return;
         }
         if (xhr.status !== 200) {
+          console.log('FIXTURE LOAD FAILED');
+          console.log(url)
+          console.log(append)
+          console.log(preload)
+
+          console.log(xhr.status)
+          console.log(JSON.stringify(Teaspoon.fixture.cache))
+
           throw "Unable to load fixture \"" + url + "\".";
         }
         return value = loadComplete(url, xhr.getResponseHeader("content-type"), xhr.responseText, append, preload);
