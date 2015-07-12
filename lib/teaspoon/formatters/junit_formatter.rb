@@ -63,8 +63,7 @@ module Teaspoon
       end
 
       def log_junit_spec(opts, &block)
-        name = escape("#{opts[:suite]} #{opts[:label]}")
-        log_line(%Q{<testcase classname="#{escape(@suite_name)}" name="#{name}">})
+        log_line(%Q{<testcase classname="#{escape(@suite_name)}" name="#{escape(opts[:label])}">})
         yield if block_given?
         log_line(%Q{<system-out>#{cdata(@stdout)}</system-out>}) unless @stdout.blank?
         log_line(%Q{</testcase>})
