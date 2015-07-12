@@ -13,6 +13,8 @@ module Teaspoon
       end
 
       def log_suite(result)
+        return if result.level > 0
+
         log_end_suite
         log_line(%Q{<testsuite name="#{result.label}">})
       end
