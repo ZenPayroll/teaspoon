@@ -94,11 +94,11 @@ module Teaspoon
     end
 
     def normalize_js_extension(filename)
-      filename.gsub('.erb', '').gsub(/(\.js\.coffee|\.coffee)$/, ".js")
+      filename.gsub('.erb', '').gsub(/(\.js\.coffee|\.coffee|\.js\.coffee\.cjsx)$/, ".js")
     end
 
     def glob
-      if @options[:matcher]        
+      if @options[:matcher]
         matcher = "{spec/javascripts/#{@options[:matcher]}}/**/*_spec.{js,js.coffee,coffee}"
       else
         matcher = config.matcher.present? ? config.matcher : ""
