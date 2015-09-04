@@ -94,7 +94,7 @@ module Teaspoon
     end
 
     def normalize_js_extension(filename)
-      filename.gsub('.erb', '').gsub(/(\.js\.coffee|\.coffee|\.js\.coffee\.cjsx)$/, ".js")
+      filename.gsub('.erb', '').gsub(/\.js.*$/, ".js")
     end
 
     def glob
