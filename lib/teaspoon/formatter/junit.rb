@@ -13,6 +13,9 @@ module Teaspoon
       end
 
       def log_suite(result)
+        return if result.level > 0
+        @suite_name = result.label
+
         log_end_suite
         log_line(%{<testsuite name="#{escape(result.label)}">})
       end
@@ -61,7 +64,7 @@ module Teaspoon
       end
 
       def log_junit_spec(opts, &_block)
-        log_line(%{<testcase classname="#{escape(opts[:suite])}" name="#{escape(opts[:label])}">})
+        log_line(%{<testcase classname="#{escape(@suite_name)}" name="#{escape(opts[:label])}">})
         yield if block_given?
         log_line(%{<system-out>#{cdata(@stdout)}</system-out>}) unless @stdout.blank?
         log_line(%{</testcase>})
