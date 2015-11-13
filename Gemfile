@@ -1,35 +1,20 @@
-source 'https://rubygems.org'
+source "https://rubygems.org"
 
-gemspec
-
-# gems that teaspoon can utilize
-gem "selenium-webdriver"
-gem "capybara-webkit"
-gem "tapout"
-gem "thin"
-
-# used by the dummy application
-gem "rails", ">= 4.0.0"
-gem "coffee-rails"
-gem "sass-rails"
-gem "jquery-rails"
-gem "haml-rails"
-gem "turbolinks"
-gem "spring"
-gem "jbuilder", require: false
-gem "sdoc", require: false
-gem "web-console"
-gem "byebug"
-
-# used by test rails apps
-gem "sqlite3"
-gem "uglifier"
+gemspec name: "teaspoon"
 
 group :development, :test do
-  gem "rspec-rails"
-  gem "capybara"
-  gem "aruba"
-end
+  gemspec name: "teaspoon-devkit"
 
-# io services
-gem "coveralls", require: false
+  # frameworks
+  gem "teaspoon-jasmine", path: "teaspoon-jasmine"
+  gem "teaspoon-mocha", path: "teaspoon-mocha"
+  gem "teaspoon-qunit", path: "teaspoon-qunit"
+
+  # gems that teaspoon can utilize
+  gem "selenium-webdriver"
+  gem "capybara-webkit"
+
+  # io services
+  gem "codeclimate-test-reporter", group: :test, require: false
+  gem "rubocop", require: false
+end

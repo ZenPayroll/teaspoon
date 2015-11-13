@@ -1,32 +1,94 @@
-class TeaspoonInterface
+#= require_self
+#= require_tree ./mixins
+#= require teaspoon/utility
+#= require teaspoon/runner
+#= require teaspoon/fixture
+#= require teaspoon/hook
+#= require teaspoon/spec
+#= require teaspoon/suite
+#= require teaspoon/reporters/html
+#= require teaspoon/reporters/console
 
-  constructor: ->
-    @files = $u("#teaspoon-suite-list .file a")
-    @input = $u("#teaspoon-filter-input")[0]
-    @input.value = ""
-    @input.onkeyup = @filter
+class @Teaspoon
+  @defer:     false
+  @slow:      75
+  @root:      window.location.pathname.replace(/\/+(index\.html)?$/, "").replace(/\/[^\/]*$/, "")
+  @started:   false
+  @finished:  false
+  @Reporters: {}
+  @Date:      Date
+  @location:  window.location
+  @messages:  []
+
+  @execute: ->
+    unless Teaspoon.framework
+      throw "No framework registered. Expected a framework to register itself, but nothing has."
+
+    if Teaspoon.defer
+      Teaspoon.defer = false
+      return
+    Teaspoon.reload() if Teaspoon.started
+    Teaspoon.started = true
+    new (Teaspoon.resolveClass("Runner"))()
 
 
-  filter: =>
-    for file in @files
-      if LiquidMetal.score(file.innerHTML, @input.value) > 0
-        file.parentNode.style.display = "block"
-      else
-        file.parentNode.style.display = "none"
+  @reload: ->
+    window.location.reload()
 
 
-window.onload = -> new TeaspoonInterface()
+  @onWindowLoad: (method) ->
+    originalOnload = window.onload
+    window.onload = ->
+      originalOnload() if originalOnload && originalOnload.call
+      method()
 
-`
-/*!
- * LiquidMetal
- * Copyright (c) 2009, Ryan McGeary (ryanonjavascript -[at]- mcgeary [*dot*] org)
- */
-var LiquidMetal=function(){var l=0.0;var m=1.0;var n=0.8;var o=0.9;var p=0.85;return{score:function(a,b){if(b.length==0)return n;if(b.length>a.length)return l;var c=this.buildScoreArray(a,b);var d=0.0;for(var i=0;i<c.length;i++){d+=c[i]}return(d/c.length)},buildScoreArray:function(a,b){var d=new Array(a.length);var e=a.toLowerCase();var f=b.toLowerCase().split("");var g=-1;var h=false;for(var i=0;i<f.length;i++){var c=f[i];var j=e.indexOf(c,g+1);if(j<0)return fillArray(d,l);if(j==0)h=true;if(isNewWord(a,j)){d[j-1]=1;fillArray(d,p,g+1,j-1)}else if(isUpperCase(a,j)){fillArray(d,p,g+1,j)}else{fillArray(d,l,g+1,j)}d[j]=m;g=j}var k=h?o:n;fillArray(d,k,g+1);return d}};function isUpperCase(a,b){var c=a.charAt(b);return("A"<=c&&c<="Z")}function isNewWord(a,b){var c=a.charAt(b-1);return(c==" "||c=="\t")}function fillArray(a,b,c,d){c=Math.max(c||0,0);d=Math.min(d||a.length,a.length);for(var i=c;i<d;i++){a[i]=b}return a}}();
 
-/*!
- * uSelector
- * author: Fabio Miranda Costa | github: fabiomcosta | twitter: @fabiomiranda | license: MIT-style license
- */
-(function(h,i){var f,c,j,k,m={},e,l,q=/^\s+|\s+$/g,r=!!i.querySelectorAll,g=function(d,b,a){f=a||[];e=b||g.context;if(r)try{n(e.querySelectorAll(d));return f}catch(v){}l=e.ownerDocument||e;d=d.replace(q,"");for(c={};d=d.replace(/([#.:])?([^#.:]*)/,s););d=(b=c.id)&&c.tag||c.classes||c.pseudos||!b&&(c.classes||c.pseudos)?t:o;if(b){if(a=b=l.getElementById(b))if(!(a=l===e))a:{a=b;do if(a===e){a=true;break a}while(a=a.parentNode);a=false}a&&d([b])}else d(e.getElementsByTagName(c.tag||"*"));return f},u=function(d){if(c.tag){var b=d.nodeName.toUpperCase();if(c.tag=="*"){if(b<"@")return false}else if(b!=c.tag)return false}if(c.id&&d.getAttribute("id")!=c.id)return false;if(j=c.classes){var a=" "+d.className+" ";for(b=j.length;b--;)if(a.indexOf(" "+j[b]+" ")<0)return false}if(k=c.pseudos)for(b=k.length;b--;){a=m[k[b]];if(!(a&&a.call(g,d)))return false}return true},s=function(d,b,a){if(b)if(b=="#")c.id=a;else if(b==".")if(c.classes)c.classes.push(a);else c.classes=[a];else{if(b==":")if(c.pseudos)c.pseudos.push(a);else c.pseudos=[a]}else c.tag=a.toUpperCase();return""},p=Array.prototype.slice,n=function(d){f=p.call(d,0)},o=function(d){for(var b=0,a;a=d[b++];)f.push(a)};try{p.call(i.documentElement.childNodes,0)}catch(w){n=o}var t=function(d){for(var b=0,a;a=d[b++];)u(a)&&f.push(a)};g.pseudos=m;g.context=i;h.uSelector=g;h.$u||(h.$u=g)})(this,document);
-`
+  @resolveDependenciesFromParams: (all = []) ->
+    deps = []
+    return all if (paths = Teaspoon.location.search.match(/[\?&]file(\[\])?=[^&\?]*/gi)) == null
+
+    for path in paths
+      parts = decodeURIComponent(path.replace(/\+/g, " ")).match(/\/(.+)\.(js|js.coffee|coffee)$/i)
+      continue if parts == null
+      file = parts[1].substr(parts[1].lastIndexOf("/") + 1)
+      for dep in all then deps.push(dep) if dep.indexOf(file) >= 0
+    deps
+
+
+  @log: ->
+    Teaspoon.messages.push(arguments[0])
+    try console?.log?(arguments...)
+    catch e
+      throw new Error("Unable to use console.log for logging")
+
+
+  @getMessages: ->
+    messages = Teaspoon.messages
+    Teaspoon.messages = []
+    messages
+
+
+  @setFramework: (namespace) ->
+    Teaspoon.framework = namespace
+    window.fixture = Teaspoon.resolveClass("Fixture")
+
+
+  # This checks if a framework has overridden a core class and if we should
+  # load that instead of the core base class.
+  @resolveClass: (klass) ->
+    if framework_override = Teaspoon.checkNamespace(Teaspoon.framework, klass)
+      return framework_override
+    else if teaspoon_core = Teaspoon.checkNamespace(Teaspoon, klass)
+      return teaspoon_core
+
+    throw "Could not find the class you're looking for: #{klass}"
+
+
+  @checkNamespace: (root, klass) ->
+    namespaces = klass.split('.')
+    scope = root
+
+    for namespace, i in namespaces
+      return false if !(scope = scope[namespace])
+
+    return scope

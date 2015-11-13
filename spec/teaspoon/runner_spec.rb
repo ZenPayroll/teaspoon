@@ -4,13 +4,11 @@ require "teaspoon/exceptions"
 require "teaspoon/coverage"
 
 describe Teaspoon::Runner do
-
   before do
     allow(Teaspoon.configuration).to receive(:formatters).and_return([])
   end
 
   describe "#initialize" do
-
     it "sets @suite_name and @failure_count" do
       subject = Teaspoon::Runner.new(:foo)
       expect(subject.instance_variable_get(:@suite_name)).to eq(:foo)
@@ -18,23 +16,14 @@ describe Teaspoon::Runner do
     end
 
     it "instantiates formatters based on configuration" do
-      allow(Teaspoon.configuration).to receive(:formatters).and_return(["dot", "xml"])
-      Teaspoon::Formatters::XmlFormatter = Class.new do
-        def initialize(_suite_name = :default, _output_file = nil) end
-      end
-      expect(subject.instance_variable_get(:@formatters)[0]).to be_a(Teaspoon::Formatters::DotFormatter)
-      expect(subject.instance_variable_get(:@formatters)[1]).to be_a(Teaspoon::Formatters::XmlFormatter)
-    end
+      allow(Teaspoon.configuration).to receive(:formatters).and_return(["dot", "pride"])
 
-    it "raises a Teaspoon::UnknownFormatter exception when a formatter isn't found" do
-      allow(Teaspoon.configuration).to receive(:formatters).and_return(["bar"])
-      expect { Teaspoon::Runner.new(:foo) }.to raise_error Teaspoon::UnknownFormatter, "Unknown formatter: \"bar\""
+      expect(subject.instance_variable_get(:@formatters)[0]).to be_a(Teaspoon::Formatter::Dot)
+      expect(subject.instance_variable_get(:@formatters)[1]).to be_a(Teaspoon::Formatter::Pride)
     end
-
   end
 
   describe "#process" do
-
     let(:formatter) { double }
     let(:coverage) { double(generate_reports: nil, check_thresholds: nil) }
 
@@ -75,16 +64,16 @@ describe Teaspoon::Runner do
     end
 
     describe "with an exception" do
-
-      it "notifies itself, and raises Teaspoon::RunnerException" do
+      it "notifies itself, and raises an exception" do
         expect(subject).to receive(:on_exception).and_call_original
-        expect { subject.process('{"_teaspoon":true,"type":"exception","message":"_message_"}') }.to raise_error Teaspoon::RunnerException, "_message_"
+        expect { subject.process('{"_teaspoon":true,"type":"exception","message":"_message_"}') }.to raise_error(
+          Teaspoon::RunnerError,
+          "_message_"
+        )
       end
-
     end
 
     describe "with a result" do
-
       before do
         allow(Teaspoon::Coverage).to receive(:new).and_return(coverage)
       end
@@ -95,8 +84,8 @@ describe Teaspoon::Runner do
       end
 
       it "resolves coverage" do
-        expect(Teaspoon.configuration).to receive(:use_coverage).twice.and_return("_coverage_config_")
-        expect(Teaspoon::Coverage).to receive(:new).with(:default, "_coverage_config_", "_coverage_").and_return(coverage)
+        expect(Teaspoon.configuration).to receive(:use_coverage).and_return("_config_")
+        expect(Teaspoon::Coverage).to receive(:new).with(:default, "_coverage_").and_return(coverage)
         expect(coverage).to receive(:generate_reports).and_yield("_generated_reports_")
         expect(coverage).to receive(:check_thresholds).and_yield("_threshold_failures_")
         expect(subject).to receive(:notify_formatters).once.with("coverage", "_generated_reports_")
@@ -106,8 +95,12 @@ describe Teaspoon::Runner do
         expect(subject.failure_count).to eq(1)
       end
 
+      it "raises an exception when istanbul cannot be found if coverage is requested" do
+        expect(Teaspoon.configuration).to receive(:use_coverage).and_return("_config_")
+        expect(Teaspoon::Instrumentation).to receive(:executable).and_return(nil)
+
+        expect { subject.process('{"_teaspoon":true,"type":"result","coverage":"_coverage_"}') }.to raise_error(Teaspoon::IstanbulNotFoundError)
+      end
     end
-
   end
-
 end

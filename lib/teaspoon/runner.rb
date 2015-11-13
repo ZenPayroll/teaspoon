@@ -3,13 +3,12 @@ require "teaspoon/result"
 
 module Teaspoon
   class Runner
-
     attr_reader :failure_count
 
     def initialize(suite_name = :default)
       @suite_name = suite_name
       @failure_count = 0
-      @formatters = Teaspoon.configuration.formatters.map{ |f| resolve_formatter(f) }
+      @formatters = Teaspoon.configuration.formatters.map { |f| resolve_formatter(f) }
     end
 
     def process(line)
@@ -23,10 +22,7 @@ module Teaspoon
 
     def resolve_formatter(formatter)
       formatter, output = formatter.to_s.split(">")
-      formatter = Teaspoon::Formatters.const_get("#{formatter.camelize}Formatter")
-      formatter.new(@suite_name, output)
-    rescue NameError
-      raise Teaspoon::UnknownFormatter, "Unknown formatter: \"#{formatter}\""
+      Teaspoon::Formatter.fetch(formatter).new(@suite_name, output)
     end
 
     def notify_formatters(event, result)
@@ -50,7 +46,7 @@ module Teaspoon
     end
 
     def on_exception(result)
-      raise Teaspoon::RunnerException, result.message
+      raise Teaspoon::RunnerError.new(result.message)
     end
 
     def on_result(result)
@@ -59,8 +55,10 @@ module Teaspoon
     end
 
     def resolve_coverage(data)
-      return unless Teaspoon.configuration.use_coverage && data.present?
-      coverage = Teaspoon::Coverage.new(@suite_name, Teaspoon.configuration.use_coverage, data)
+      return unless Teaspoon.configuration.use_coverage
+      raise Teaspoon::IstanbulNotFoundError unless Teaspoon::Instrumentation.executable
+
+      coverage = Teaspoon::Coverage.new(@suite_name, data)
       coverage.generate_reports { |msg| notify_formatters("coverage", msg) }
       coverage.check_thresholds do |msg|
         notify_formatters("threshold_failure", msg)

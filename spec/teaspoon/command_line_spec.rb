@@ -2,25 +2,13 @@ require "spec_helper"
 require "teaspoon/command_line"
 require "teaspoon/console"
 
-module Kernel
-  def suppress_warnings
-    original_verbosity = $VERBOSE
-    $VERBOSE = nil
-    result = yield
-    $VERBOSE = original_verbosity
-    return result
-  end
-end
-
 describe Teaspoon::CommandLine do
-
-  subject { Teaspoon::CommandLine }
+  subject { described_class }
 
   let(:console) { double(failures?: false) }
   let(:parser) { double(parse!: ["file1", "file2"]) }
 
   describe "#initialize" do
-
     before do
       allow(Teaspoon::Console).to receive(:new).and_return(console)
       allow_any_instance_of(subject).to receive(:abort)
@@ -32,8 +20,12 @@ describe Teaspoon::CommandLine do
     end
 
     it "aborts with a message on Teaspoon::EnvironmentNotFound" do
-      expect(Teaspoon::Console).to receive(:new).and_raise(Teaspoon::EnvironmentNotFound)
-      expect_any_instance_of(subject).to receive(:abort).with("Teaspoon::EnvironmentNotFound\nConsider using -r path/to/teaspoon_env\n")
+      expect(Teaspoon::Console).to receive(:new).
+        and_raise(Teaspoon::EnvironmentNotFound.new(searched: "path1, path2"))
+      expect(Teaspoon).to receive(:abort).with(
+        "Unable to locate environment; searched in [path1, path2]. Have you run the installer? "\
+        "Consider using --require=path/to/teaspoon_env.rb"
+      )
       subject.new
     end
 
@@ -44,22 +36,13 @@ describe Teaspoon::CommandLine do
     end
 
     it "aborts if Teaspoon::Console fails" do
-      expect_any_instance_of(subject).to receive(:abort)
+      expect(Teaspoon).to receive(:abort)
       expect(console).to receive(:failures?).and_return(true)
       subject.new
     end
-
-    it "logs a message and exits on abort" do
-      expect(STDOUT).to receive(:print).with("Teaspoon::EnvironmentNotFound\nConsider using -r path/to/teaspoon_env\n")
-      expect(Teaspoon::Console).to receive(:new).and_raise(Teaspoon::EnvironmentNotFound)
-      expect_any_instance_of(subject).to receive(:abort).and_call_original
-      expect { subject.new }.to raise_error SystemExit
-    end
-
   end
 
-  describe "opt_parser" do
-
+  describe "#opt_parser" do
     before do
       @log = ""
       allow(STDOUT).to receive(:print) { |s| @log << s }
@@ -68,7 +51,7 @@ describe Teaspoon::CommandLine do
 
     it "has --help" do
       suppress_warnings { ARGV = ["--help"] }
-      expect { subject.new.opt_parser }.to raise_error SystemExit
+      expect { subject.new.opt_parser }.to raise_error(SystemExit)
       expect(@log).to include <<-OUTPUT.strip_heredoc
       Usage: teaspoon [options] [files]
 
@@ -98,17 +81,7 @@ describe Teaspoon::CommandLine do
           -c, --[no-]color                 Enable/Disable color output.
           -e, --export [OUTPUT_PATH]       Exports the test suite as the full HTML (requires wget).
           -f, --format FORMATTERS          Specify formatters (comma separated)
-                                             dot (default) - dots
-                                             documentation - descriptive documentation
-                                             clean - like dots but doesn't log re-run commands
-                                             json - json formatter (raw teaspoon)
-                                             junit - junit compatible formatter
-                                             pride - yay rainbows!
-                                             snowday - makes you feel warm inside
-                                             swayze_or_oprah - quote from either Patrick Swayze or Oprah Winfrey
-                                             tap - test anything protocol formatter
-                                             tap_y - tap_yaml, format used by tapout
-                                             teamcity - teamcity compatible formatter
+                                           #{subject.new.send(:formatter_details).join("\n" + (' ' * 43))}
 
         **** Coverage ****
 
@@ -123,7 +96,7 @@ describe Teaspoon::CommandLine do
 
     it "has --version" do
       suppress_warnings { ARGV = ["--version"] }
-      expect { subject.new.opt_parser }.to raise_error SystemExit
+      expect { subject.new.opt_parser }.to raise_error(SystemExit)
       expect(@log).to match(/\d+\.\d+\.\d+\n/)
     end
 
@@ -161,7 +134,5 @@ describe Teaspoon::CommandLine do
         expect(subject.new.instance_variable_get(:@options)[k]).to eq(false)
       end
     end
-
   end
-
 end

@@ -1,17 +1,24 @@
 module Teaspoon
   class Coverage
+    def self.configuration(name = Teaspoon.configuration.use_coverage)
+      name = normalize_config_name(name)
+      config = Teaspoon.configuration.coverage_configs[name]
 
-    def initialize(suite_name, config_name, data)
+      raise Teaspoon::UnknownCoverage.new(name: name) unless config.present?
+      config[:instance] ||= Teaspoon::Configuration::Coverage.new(&config[:block])
+    end
+
+    def initialize(suite_name, data)
       @suite_name = suite_name
       @data = data
       @executable = Teaspoon::Instrumentation.executable
-      @config = coverage_configuration(config_name.to_s)
+      @config = self.class.configuration
     end
 
     def generate_reports(&block)
       input_path do |input|
         results = []
-        for format in @config.reports
+        @config.reports.each do |format|
           result = generate_report(input, format)
           results << result if ["text", "text-summary"].include?(format.to_s)
         end
@@ -32,10 +39,9 @@ module Teaspoon
 
     private
 
-    def coverage_configuration(name)
-      config = Teaspoon.configuration.coverage_configs[name]
-      raise Teaspoon::UnknownCoverage, "Unknown coverage configuration \"#{name}\"" unless config.present?
-      config[:instance] ||= Teaspoon::Configuration::Coverage.new(&config[:block])
+    def self.normalize_config_name(name)
+      return "default" if name == true
+      name.to_s
     end
 
     def input_path(&block)
@@ -50,7 +56,7 @@ module Teaspoon
       output_path = File.join(@config.output_path, @suite_name)
       result = %x{#{@executable} report --include=#{input.shellescape} --dir #{output_path} #{format} 2>&1}
       return result.gsub("Done", "").gsub("Using reporter [#{format}]", "").strip if $?.exitstatus == 0
-      raise Teaspoon::DependencyFailure, "Could not generate coverage report for #{format}"
+      raise Teaspoon::DependencyError.new("Unable to generate #{format} coverage report:\n#{result}")
     end
 
     def threshold_args

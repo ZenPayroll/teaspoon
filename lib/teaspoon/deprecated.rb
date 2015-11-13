@@ -1,7 +1,9 @@
 module Teaspoon
-
   def self.setup(&block)
-    Teaspoon.dep("Teaspoon.setup is deprecated, use Teaspoon.configure instead. The /initializer/teaspoon.rb file should be removed, and a new teaspoon_env.rb file should be created by running the install generator.")
+    Teaspoon.dep(
+      "Teaspoon.setup is deprecated, use Teaspoon.configure instead. The /initializer/teaspoon.rb file should be " +
+      "removed, and a new teaspoon_env.rb file should be created by running the install generator."
+    )
     configure(&block)
   end
 
@@ -16,13 +18,15 @@ module Teaspoon
   end
 
   class Configuration
-
-    def self.context=(*args)
+    def self.context=(*_args)
       Teaspoon.dep("the teaspoon context directive is no longer used, remove it from your configuration.")
     end
 
     def self.fixture_path=(*args)
-      Teaspoon.dep("the teaspoon fixture_path directive has been changed to fixture_paths, which expects an array, please update your configuration.")
+      Teaspoon.dep(
+        "the teaspoon fixture_path directive has been changed to fixture_paths, which expects an array, please " +
+        "update your configuration."
+      )
       self.fixture_paths = args
     end
 
@@ -45,20 +49,44 @@ teaspoon coverage directive has changed and is now more flexible, define coverag
   > set: config.use_coverage = "CI"
     MESSAGE
 
-    for method in %w{coverage coverage_reports coverage_output_dir statements_coverage_threshold functions_coverage_threshold branches_coverage_threshold lines_coverage_threshold}
-      define_singleton_method("#{method}=") do |val|
+    [
+      "coverage",
+      "coverage_reports",
+      "coverage_output_dir",
+      "statements_coverage_threshold",
+      "functions_coverage_threshold",
+      "branches_coverage_threshold",
+      "lines_coverage_threshold"
+    ].each do |method|
+      define_singleton_method("#{method}=") do |*_args|
         Teaspoon.dep(@coverage_dep_message, :coverage)
       end
     end
 
     class Suite
-
-      def js_config=(*args)
-        Teaspoon.dep("the teaspoon suite js_config directive is no longer used, use the install generator to install the boot partial and customize it instead.", :js_config)
+      def js_config=(*_args)
+        Teaspoon.dep(
+          "the teaspoon suite js_config directive is no longer used, use the install generator to install the boot " +
+          "partial and customize it instead.", :js_config
+        )
       end
 
-      def normalize_asset_path=(*args)
-        Teaspoon.dep("the teaspoon suite normalize_asset_path directive is no longer used, reopen Teaspoon::Suite and define a normalize_js_extension method instead.", :normalize_asset_path)
+      def normalize_asset_path=(*_args)
+        Teaspoon.dep(
+          "the teaspoon suite normalize_asset_path directive is no longer used, reopen Teaspoon::Suite and define a " +
+          "normalize_js_extension method instead.", :normalize_asset_path
+        )
+      end
+
+      def no_coverage(*)
+        Teaspoon.dep("suite.no_coverage has been removed in Teaspoon 1.0. Please use coverage.ignore instead. https://github.com/modeset/teaspoon/blob/master/CHANGELOG.md")
+        []
+      end
+      alias_method :no_coverage=, :no_coverage
+
+      def use_framework=(name, _version = nil)
+        Teaspoon.dep("suite.use_framework= is deprecated, use suite.use_framework instead.")
+        use_framework(*name)
       end
     end
   end
