@@ -9,5 +9,7 @@ task :teaspoon => :environment do |t, args|
     driver_options: ENV["driver_options"],
   }
 
+  options.delete_if { |k, v| v.nil? }
+
   abort("rake teaspoon failed") if Teaspoon::Console.new(options).failures?
 end
